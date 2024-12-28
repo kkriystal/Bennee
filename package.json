@@ -1,0 +1,24 @@
+{
+  "name": "bennee",
+  "version": "1.0-beta.0",
+  "description": "lending and borrowing",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kkriystal/Bennee"
+  },
+  "license": "MIT",
+  "scripts": {
+    "format": "prettier --check --write contracts/**/*.sol **/*.js --config .prettierrc",
+    "compile": "hardhat compile",
+    "deploy": "hardhat compile && hardhat run scripts/deployPresale.js --network sepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.17",
+    "@openzeppelin/contracts": "5.1.0",
+    "dotenv": "^16.4.7",
+    "prettier": "^3.2.5",
+    "prettier-package-json": "^2.8.0",
+    "prettier-plugin-solidity": "^1.3.1"
+  }
+}

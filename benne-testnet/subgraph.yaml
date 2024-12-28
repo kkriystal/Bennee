@@ -1,0 +1,62 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Bennee
+    network: sepolia
+    source:
+      address: "0x50613029cA140392744F8638D8D34aEF857a6D03"
+      abi: Bennee
+      startBlock: 7302874
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Borrowed
+        - CancelledRequest
+        - CancelledSupply
+        - DefaultWithdraw
+        - FxRateUpdated
+        - FxSchedulerUpdated
+        - OwnershipTransferStarted
+        - OwnershipTransferred
+        - Repaid
+        - Requested
+        - SignerUpdated
+        - Supplied
+        - Withdraw
+      abis:
+        - name: Bennee
+          file: ./abis/Bennee.json
+      eventHandlers:
+        - event: Borrowed(address,uint256)
+          handler: handleBorrowed
+        - event: CancelledRequest(address,uint256)
+          handler: handleCancelledRequest
+        - event: CancelledSupply(address,address,uint256,uint256)
+          handler: handleCancelledSupply
+        - event: DefaultWithdraw(address,uint256,address,uint256)
+          handler: handleDefaultWithdraw
+        - event: FxRateUpdated(address,uint256)
+          handler: handleFxRateUpdated
+        - event: FxSchedulerUpdated(address,address)
+          handler: handleFxSchedulerUpdated
+        - event: OwnershipTransferStarted(indexed address,indexed address)
+          handler: handleOwnershipTransferStarted
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: Repaid(address,uint256,uint256)
+          handler: handleRepaid
+        - event: Requested(address,uint256,uint256,uint256,uint256,uint256)
+          handler: handleRequested
+        - event: SignerUpdated(address,address)
+          handler: handleSignerUpdated
+        - event: Supplied(address,uint256,address,uint256)
+          handler: handleSupplied
+        - event: Withdraw(address,uint256,address,uint256)
+          handler: handleWithdraw
+      file: ./src/bennee.ts
