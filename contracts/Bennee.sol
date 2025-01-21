@@ -258,7 +258,9 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         bytes32 s
     ) external {
         // The borrower must be authorised to request for loan
-        bytes32 encodedMessageHash = keccak256(abi.encodePacked(msg.sender, amountToBorrow, deadline));
+         bytes32 encodedMessageHash = keccak256(
+            abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
+        );
 
         if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
             revert InvalidSignature();
