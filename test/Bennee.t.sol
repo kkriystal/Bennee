@@ -96,7 +96,7 @@ contract BenneeTest is Test {
             ,
             ,
 
-        ) = bennee.borrowInfo(BORROWER_1, 1);
+        ) = bennee.borrowInfo(1);
 
         uint256 perDayinterest = ((amount * insuranceRatePPM) / 365) / PPM;
 
@@ -134,7 +134,7 @@ contract BenneeTest is Test {
 
         vm.startPrank(LENDER_1);
         ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(BORROWER_1, 1, amount / 2); // half of amount
+        bennee.supply(1, amount / 2); // half of amount
         vm.stopPrank();
 
         vm.startPrank(BORROWER_1);
@@ -184,7 +184,7 @@ contract BenneeTest is Test {
             ,
             ,
 
-        ) = bennee.borrowInfo(BORROWER_1, 1);
+        ) = bennee.borrowInfo(1);
 
         uint256 perDayinterest = ((amount * insuranceRatePPM) / 365) / PPM;
 
@@ -202,21 +202,21 @@ contract BenneeTest is Test {
 
         vm.startPrank(LENDER_1);
         ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(BORROWER_1, 1, amount / 3); // half of amount
+        bennee.supply(1, amount / 3); // half of amount
         vm.stopPrank();
 
         vm.startPrank(LENDER_2);
         ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(BORROWER_1, 1, amount / 3);
+        bennee.supply(1, amount / 3);
         vm.stopPrank();
 
         vm.startPrank(LENDER_3);
         ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(BORROWER_1, 1, (amount - amount / 3));
+        bennee.supply(1, (amount - amount / 3));
 
         bytes4 selector = bytes4(keccak256("ThresholdReached()"));
         vm.expectRevert(abi.encodeWithSelector(selector));
-        bennee.supply(BORROWER_1, 1, (amount - amount / 3));
+        bennee.supply(1, (amount - amount / 3));
         vm.stopPrank();
     }
 
@@ -246,7 +246,7 @@ contract BenneeTest is Test {
             ,
             ,
 
-        ) = bennee.borrowInfo(BORROWER_1, 1);
+        ) = bennee.borrowInfo(1);
 
         uint256 perDayinterest = ((amount * insuranceRatePPM) / 365) / PPM;
         uint256 expectedAmountWithInterest = amount + (perDayinterest * tenure);
@@ -263,7 +263,7 @@ contract BenneeTest is Test {
 
         vm.startPrank(LENDER_1);
         ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(BORROWER_1, 1, amount / 2); // half of amount
+        bennee.supply(1, amount / 2); // half of amount
         vm.stopPrank();
 
         vm.startPrank(BORROWER_1);
@@ -275,7 +275,7 @@ contract BenneeTest is Test {
 
         vm.startPrank(LENDER_2);
         ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(BORROWER_1, 1, amount);
+        bennee.supply(1, amount);
         vm.stopPrank();
 
         vm.startPrank(BORROWER_1);
@@ -305,12 +305,12 @@ contract BenneeTest is Test {
 
         vm.startPrank(BORROWER_1);
         bennee.request(amount, tenure, repayWindow, deadline, v, r, s);
-        bennee.borrowInfo(BORROWER_1, 1);
+        bennee.borrowInfo(1);
         vm.stopPrank();
 
         vm.startPrank(LENDER_1);
         ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(BORROWER_1, 1, amount); // half of amount
+        bennee.supply(1, amount); // half of amount
         vm.stopPrank();
 
         vm.startPrank(BORROWER_1);
@@ -335,7 +335,7 @@ contract BenneeTest is Test {
             ,
             bool _hasBorrowed,
             bool _hasRepaid
-        ) = bennee.borrowInfo(BORROWER_1, 1);
+        ) = bennee.borrowInfo(1);
 
         vm.warp(block.timestamp + 100 days);
 
@@ -360,7 +360,7 @@ contract BenneeTest is Test {
             ,
             _hasBorrowed,
             _hasRepaid
-        ) = bennee.borrowInfo(BORROWER_1, 1);
+        ) = bennee.borrowInfo(1);
 
         vm.stopPrank();
 
@@ -375,7 +375,7 @@ contract BenneeTest is Test {
         vm.stopPrank();
 
         vm.startPrank(LENDER_1);
-        bennee.withdraw(1, BORROWER_1);
+        bennee.withdraw(1);
         (
             _borrowAmount,
             ,
@@ -391,7 +391,7 @@ contract BenneeTest is Test {
             ,
             _hasBorrowed,
             _hasRepaid
-        ) = bennee.borrowInfo(BORROWER_1, 1);
+        ) = bennee.borrowInfo(1);
         (uint lendAmount1, uint accruedAmount1) = bennee.lendInfo(1, LENDER_1);
         (lendAmount1, accruedAmount1) = bennee.lendInfo(1, LENDER_1);
         (lendAmount1, accruedAmount1) = bennee.lendInfo(1, LENDER_1);
