@@ -14,7 +14,12 @@
         "name": "insuranceRateInitPPM",
         "type": "uint256"
       },
-      { "internalType": "uint256", "name": "fxRatePPMInit", "type": "uint256" }
+      { "internalType": "uint256", "name": "fxRatePPMInit", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "fxRatePercentagePPMInit",
+        "type": "uint256"
+      }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
@@ -25,7 +30,6 @@
   { "inputs": [], "name": "CallerNotBorrower", "type": "error" },
   { "inputs": [], "name": "IdenticalValue", "type": "error" },
   { "inputs": [], "name": "InvalidFxRate", "type": "error" },
-  { "inputs": [], "name": "InvalidRepayAmount", "type": "error" },
   { "inputs": [], "name": "InvalidRepayWindow", "type": "error" },
   { "inputs": [], "name": "InvalidSignature", "type": "error" },
   { "inputs": [], "name": "InvalidValues", "type": "error" },
@@ -73,6 +77,18 @@
         "internalType": "uint256",
         "name": "borrowIndex",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "endTime",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "mintedAmount",
+        "type": "uint256"
       }
     ],
     "name": "Borrowed",
@@ -108,12 +124,6 @@
       },
       {
         "indexed": false,
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
         "name": "borrowIndex",
         "type": "uint256"
@@ -142,12 +152,6 @@
         "internalType": "uint256",
         "name": "borrowIndex",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
       },
       {
         "indexed": false,
@@ -190,11 +194,30 @@
       {
         "indexed": false,
         "internalType": "address",
-        "name": "newFxScheduler",
+        "name": "newFxSchedulerAddress",
         "type": "address"
       }
     ],
     "name": "FxSchedulerUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldInsuranceRate",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newInsuranceRate",
+        "type": "uint256"
+      }
+    ],
+    "name": "InsuranceRateUpdated",
     "type": "event"
   },
   {
@@ -240,12 +263,6 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
         "name": "borrowerIndex",
         "type": "uint256"
@@ -253,7 +270,19 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "repayAmount",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "burnAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "lastRepayTime",
         "type": "uint256"
       }
     ],
@@ -290,7 +319,19 @@
       {
         "indexed": false,
         "internalType": "uint256",
+        "name": "amountWithInterest",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "interestRate",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "repayAmountPerWindow",
         "type": "uint256"
       },
       {
@@ -339,12 +380,6 @@
       },
       {
         "indexed": false,
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
         "name": "borrowIndex",
         "type": "uint256"
@@ -367,12 +402,6 @@
         "internalType": "uint256",
         "name": "borrowIndex",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
       },
       {
         "indexed": false,
@@ -404,7 +433,7 @@
     "inputs": [],
     "name": "bennee",
     "outputs": [
-      { "internalType": "contract IBenne", "name": "", "type": "address" }
+      { "internalType": "contract IBennee", "name": "", "type": "address" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -419,10 +448,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "", "type": "address" },
-      { "internalType": "uint256", "name": "", "type": "uint256" }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "name": "borrowInfo",
     "outputs": [
       { "internalType": "uint256", "name": "borrowAmount", "type": "uint256" },
@@ -470,7 +496,6 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "borrower", "type": "address" },
       { "internalType": "uint256", "name": "borrowIndex", "type": "uint256" },
       { "internalType": "uint256", "name": "amount", "type": "uint256" }
     ],
@@ -481,9 +506,26 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "newFxScheduler", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "newFxSchedulerAddress",
+        "type": "address"
+      }
     ],
     "name": "changeFxScheduler",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "newInsuranceRatePPM",
+        "type": "uint256"
+      }
+    ],
+    "name": "changeInsuranceRate",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -507,6 +549,13 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "fxRatePercentage",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       { "internalType": "contract IERC20", "name": "", "type": "address" }
     ],
@@ -519,6 +568,13 @@
     "inputs": [],
     "name": "fxScheduler",
     "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "index",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -572,8 +628,7 @@
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "borrowIndex", "type": "uint256" },
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+      { "internalType": "uint256", "name": "borrowIndex", "type": "uint256" }
     ],
     "name": "repay",
     "outputs": [],
@@ -604,7 +659,6 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "borrower", "type": "address" },
       { "internalType": "uint256", "name": "borrowIndex", "type": "uint256" },
       { "internalType": "uint256", "name": "supplyAmount", "type": "uint256" }
     ],
@@ -639,16 +693,8 @@
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
-    "name": "userIndex",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
-      { "internalType": "uint256", "name": "borrowIndex", "type": "uint256" },
-      { "internalType": "address", "name": "borrower", "type": "address" }
+      { "internalType": "uint256", "name": "borrowIndex", "type": "uint256" }
     ],
     "name": "withdraw",
     "outputs": [],

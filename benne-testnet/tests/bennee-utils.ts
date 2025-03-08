@@ -7,6 +7,7 @@ import {
   DefaultWithdraw,
   FxRateUpdated,
   FxSchedulerUpdated,
+  InsuranceRateUpdated,
   OwnershipTransferStarted,
   OwnershipTransferred,
   Repaid,
@@ -18,7 +19,9 @@ import {
 
 export function createBorrowedEvent(
   by: Address,
-  borrowIndex: BigInt
+  borrowIndex: BigInt,
+  endTime: BigInt,
+  mintedAmount: BigInt
 ): Borrowed {
   let borrowedEvent = changetype<Borrowed>(newMockEvent())
 
@@ -31,6 +34,18 @@ export function createBorrowedEvent(
     new ethereum.EventParam(
       "borrowIndex",
       ethereum.Value.fromUnsignedBigInt(borrowIndex)
+    )
+  )
+  borrowedEvent.parameters.push(
+    new ethereum.EventParam(
+      "endTime",
+      ethereum.Value.fromUnsignedBigInt(endTime)
+    )
+  )
+  borrowedEvent.parameters.push(
+    new ethereum.EventParam(
+      "mintedAmount",
+      ethereum.Value.fromUnsignedBigInt(mintedAmount)
     )
   )
 
@@ -60,7 +75,6 @@ export function createCancelledRequestEvent(
 
 export function createCancelledSupplyEvent(
   lender: Address,
-  borrower: Address,
   borrowIndex: BigInt,
   cancelAmount: BigInt
 ): CancelledSupply {
@@ -70,9 +84,6 @@ export function createCancelledSupplyEvent(
 
   cancelledSupplyEvent.parameters.push(
     new ethereum.EventParam("lender", ethereum.Value.fromAddress(lender))
-  )
-  cancelledSupplyEvent.parameters.push(
-    new ethereum.EventParam("borrower", ethereum.Value.fromAddress(borrower))
   )
   cancelledSupplyEvent.parameters.push(
     new ethereum.EventParam(
@@ -93,7 +104,6 @@ export function createCancelledSupplyEvent(
 export function createDefaultWithdrawEvent(
   by: Address,
   borrowIndex: BigInt,
-  borrower: Address,
   amount: BigInt
 ): DefaultWithdraw {
   let defaultWithdrawEvent = changetype<DefaultWithdraw>(newMockEvent())
@@ -108,9 +118,6 @@ export function createDefaultWithdrawEvent(
       "borrowIndex",
       ethereum.Value.fromUnsignedBigInt(borrowIndex)
     )
-  )
-  defaultWithdrawEvent.parameters.push(
-    new ethereum.EventParam("borrower", ethereum.Value.fromAddress(borrower))
   )
   defaultWithdrawEvent.parameters.push(
     new ethereum.EventParam("amount", ethereum.Value.fromUnsignedBigInt(amount))
@@ -139,7 +146,7 @@ export function createFxRateUpdatedEvent(
 
 export function createFxSchedulerUpdatedEvent(
   oldFxScheduler: Address,
-  newFxScheduler: Address
+  newFxSchedulerAddress: Address
 ): FxSchedulerUpdated {
   let fxSchedulerUpdatedEvent = changetype<FxSchedulerUpdated>(newMockEvent())
 
@@ -153,21 +160,45 @@ export function createFxSchedulerUpdatedEvent(
   )
   fxSchedulerUpdatedEvent.parameters.push(
     new ethereum.EventParam(
-      "newFxScheduler",
-      ethereum.Value.fromAddress(newFxScheduler)
+      "newFxSchedulerAddress",
+      ethereum.Value.fromAddress(newFxSchedulerAddress)
     )
   )
 
   return fxSchedulerUpdatedEvent
 }
 
+export function createInsuranceRateUpdatedEvent(
+  oldInsuranceRate: BigInt,
+  newInsuranceRate: BigInt
+): InsuranceRateUpdated {
+  let insuranceRateUpdatedEvent =
+    changetype<InsuranceRateUpdated>(newMockEvent())
+
+  insuranceRateUpdatedEvent.parameters = new Array()
+
+  insuranceRateUpdatedEvent.parameters.push(
+    new ethereum.EventParam(
+      "oldInsuranceRate",
+      ethereum.Value.fromUnsignedBigInt(oldInsuranceRate)
+    )
+  )
+  insuranceRateUpdatedEvent.parameters.push(
+    new ethereum.EventParam(
+      "newInsuranceRate",
+      ethereum.Value.fromUnsignedBigInt(newInsuranceRate)
+    )
+  )
+
+  return insuranceRateUpdatedEvent
+}
+
 export function createOwnershipTransferStartedEvent(
   previousOwner: Address,
   newOwner: Address
 ): OwnershipTransferStarted {
-  let ownershipTransferStartedEvent = changetype<OwnershipTransferStarted>(
-    newMockEvent()
-  )
+  let ownershipTransferStartedEvent =
+    changetype<OwnershipTransferStarted>(newMockEvent())
 
   ownershipTransferStartedEvent.parameters = new Array()
 
@@ -188,9 +219,8 @@ export function createOwnershipTransferredEvent(
   previousOwner: Address,
   newOwner: Address
 ): OwnershipTransferred {
-  let ownershipTransferredEvent = changetype<OwnershipTransferred>(
-    newMockEvent()
-  )
+  let ownershipTransferredEvent =
+    changetype<OwnershipTransferred>(newMockEvent())
 
   ownershipTransferredEvent.parameters = new Array()
 
@@ -208,17 +238,15 @@ export function createOwnershipTransferredEvent(
 }
 
 export function createRepaidEvent(
-  borrower: Address,
   borrowerIndex: BigInt,
-  repayAmount: BigInt
+  param1: BigInt,
+  burnAmount: BigInt,
+  lastRepayTime: BigInt
 ): Repaid {
   let repaidEvent = changetype<Repaid>(newMockEvent())
 
   repaidEvent.parameters = new Array()
 
-  repaidEvent.parameters.push(
-    new ethereum.EventParam("borrower", ethereum.Value.fromAddress(borrower))
-  )
   repaidEvent.parameters.push(
     new ethereum.EventParam(
       "borrowerIndex",
@@ -226,9 +254,18 @@ export function createRepaidEvent(
     )
   )
   repaidEvent.parameters.push(
+    new ethereum.EventParam("param1", ethereum.Value.fromUnsignedBigInt(param1))
+  )
+  repaidEvent.parameters.push(
     new ethereum.EventParam(
-      "repayAmount",
-      ethereum.Value.fromUnsignedBigInt(repayAmount)
+      "burnAmount",
+      ethereum.Value.fromUnsignedBigInt(burnAmount)
+    )
+  )
+  repaidEvent.parameters.push(
+    new ethereum.EventParam(
+      "lastRepayTime",
+      ethereum.Value.fromUnsignedBigInt(lastRepayTime)
     )
   )
 
@@ -240,7 +277,9 @@ export function createRequestedEvent(
   index: BigInt,
   amount: BigInt,
   tenure: BigInt,
+  amountWithInterest: BigInt,
   interestRate: BigInt,
+  repayAmountPerWindow: BigInt,
   repaymentWIndow: BigInt
 ): Requested {
   let requestedEvent = changetype<Requested>(newMockEvent())
@@ -261,8 +300,20 @@ export function createRequestedEvent(
   )
   requestedEvent.parameters.push(
     new ethereum.EventParam(
+      "amountWithInterest",
+      ethereum.Value.fromUnsignedBigInt(amountWithInterest)
+    )
+  )
+  requestedEvent.parameters.push(
+    new ethereum.EventParam(
       "interestRate",
       ethereum.Value.fromUnsignedBigInt(interestRate)
+    )
+  )
+  requestedEvent.parameters.push(
+    new ethereum.EventParam(
+      "repayAmountPerWindow",
+      ethereum.Value.fromUnsignedBigInt(repayAmountPerWindow)
     )
   )
   requestedEvent.parameters.push(
@@ -296,7 +347,6 @@ export function createSignerUpdatedEvent(
 export function createSuppliedEvent(
   lender: Address,
   lendAmount: BigInt,
-  borrower: Address,
   borrowIndex: BigInt
 ): Supplied {
   let suppliedEvent = changetype<Supplied>(newMockEvent())
@@ -313,9 +363,6 @@ export function createSuppliedEvent(
     )
   )
   suppliedEvent.parameters.push(
-    new ethereum.EventParam("borrower", ethereum.Value.fromAddress(borrower))
-  )
-  suppliedEvent.parameters.push(
     new ethereum.EventParam(
       "borrowIndex",
       ethereum.Value.fromUnsignedBigInt(borrowIndex)
@@ -328,7 +375,6 @@ export function createSuppliedEvent(
 export function createWithdrawEvent(
   by: Address,
   borrowIndex: BigInt,
-  borrower: Address,
   amount: BigInt
 ): Withdraw {
   let withdrawEvent = changetype<Withdraw>(newMockEvent())
@@ -343,9 +389,6 @@ export function createWithdrawEvent(
       "borrowIndex",
       ethereum.Value.fromUnsignedBigInt(borrowIndex)
     )
-  )
-  withdrawEvent.parameters.push(
-    new ethereum.EventParam("borrower", ethereum.Value.fromAddress(borrower))
   )
   withdrawEvent.parameters.push(
     new ethereum.EventParam("amount", ethereum.Value.fromUnsignedBigInt(amount))

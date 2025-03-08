@@ -2,6 +2,8 @@ type Borrowed @entity(immutable: true) {
   id: Bytes!
   by: Bytes! # address
   borrowIndex: BigInt! # uint256
+  endTime: BigInt! # uint256
+  mintedAmount: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -19,7 +21,6 @@ type CancelledRequest @entity(immutable: true) {
 type CancelledSupply @entity(immutable: true) {
   id: Bytes!
   lender: Bytes! # address
-  borrower: Bytes! # address
   borrowIndex: BigInt! # uint256
   cancelAmount: BigInt! # uint256
   blockNumber: BigInt!
@@ -31,7 +32,6 @@ type DefaultWithdraw @entity(immutable: true) {
   id: Bytes!
   by: Bytes! # address
   borrowIndex: BigInt! # uint256
-  borrower: Bytes! # address
   amount: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -50,7 +50,16 @@ type FxRateUpdated @entity(immutable: true) {
 type FxSchedulerUpdated @entity(immutable: true) {
   id: Bytes!
   oldFxScheduler: Bytes! # address
-  newFxScheduler: Bytes! # address
+  newFxSchedulerAddress: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type InsuranceRateUpdated @entity(immutable: true) {
+  id: Bytes!
+  oldInsuranceRate: BigInt! # uint256
+  newInsuranceRate: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -76,9 +85,10 @@ type OwnershipTransferred @entity(immutable: true) {
 
 type Repaid @entity(immutable: true) {
   id: Bytes!
-  borrower: Bytes! # address
   borrowerIndex: BigInt! # uint256
-  repayAmount: BigInt! # uint256
+  param1: BigInt! # uint256
+  burnAmount: BigInt! # uint256
+  lastRepayTime: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -90,7 +100,9 @@ type Requested @entity(immutable: true) {
   index: BigInt! # uint256
   amount: BigInt! # uint256
   tenure: BigInt! # uint256
+  amountWithInterest: BigInt! # uint256
   interestRate: BigInt! # uint256
+  repayAmountPerWindow: BigInt! # uint256
   repaymentWIndow: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -110,7 +122,6 @@ type Supplied @entity(immutable: true) {
   id: Bytes!
   lender: Bytes! # address
   lendAmount: BigInt! # uint256
-  borrower: Bytes! # address
   borrowIndex: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -121,7 +132,6 @@ type Withdraw @entity(immutable: true) {
   id: Bytes!
   by: Bytes! # address
   borrowIndex: BigInt! # uint256
-  borrower: Bytes! # address
   amount: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!

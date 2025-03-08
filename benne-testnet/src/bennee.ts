@@ -5,6 +5,7 @@ import {
   DefaultWithdraw as DefaultWithdrawEvent,
   FxRateUpdated as FxRateUpdatedEvent,
   FxSchedulerUpdated as FxSchedulerUpdatedEvent,
+  InsuranceRateUpdated as InsuranceRateUpdatedEvent,
   OwnershipTransferStarted as OwnershipTransferStartedEvent,
   OwnershipTransferred as OwnershipTransferredEvent,
   Repaid as RepaidEvent,
@@ -20,6 +21,7 @@ import {
   DefaultWithdraw,
   FxRateUpdated,
   FxSchedulerUpdated,
+  InsuranceRateUpdated,
   OwnershipTransferStarted,
   OwnershipTransferred,
   Repaid,
@@ -35,6 +37,8 @@ export function handleBorrowed(event: BorrowedEvent): void {
   )
   entity.by = event.params.by
   entity.borrowIndex = event.params.borrowIndex
+  entity.endTime = event.params.endTime
+  entity.mintedAmount = event.params.mintedAmount
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
@@ -62,7 +66,6 @@ export function handleCancelledSupply(event: CancelledSupplyEvent): void {
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
   entity.lender = event.params.lender
-  entity.borrower = event.params.borrower
   entity.borrowIndex = event.params.borrowIndex
   entity.cancelAmount = event.params.cancelAmount
 
@@ -79,7 +82,6 @@ export function handleDefaultWithdraw(event: DefaultWithdrawEvent): void {
   )
   entity.by = event.params.by
   entity.borrowIndex = event.params.borrowIndex
-  entity.borrower = event.params.borrower
   entity.amount = event.params.amount
 
   entity.blockNumber = event.block.number
@@ -108,7 +110,23 @@ export function handleFxSchedulerUpdated(event: FxSchedulerUpdatedEvent): void {
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
   entity.oldFxScheduler = event.params.oldFxScheduler
-  entity.newFxScheduler = event.params.newFxScheduler
+  entity.newFxSchedulerAddress = event.params.newFxSchedulerAddress
+
+  entity.blockNumber = event.block.number
+  entity.blockTimestamp = event.block.timestamp
+  entity.transactionHash = event.transaction.hash
+
+  entity.save()
+}
+
+export function handleInsuranceRateUpdated(
+  event: InsuranceRateUpdatedEvent
+): void {
+  let entity = new InsuranceRateUpdated(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+  entity.oldInsuranceRate = event.params.oldInsuranceRate
+  entity.newInsuranceRate = event.params.newInsuranceRate
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
@@ -153,9 +171,10 @@ export function handleRepaid(event: RepaidEvent): void {
   let entity = new Repaid(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
-  entity.borrower = event.params.borrower
   entity.borrowerIndex = event.params.borrowerIndex
-  entity.repayAmount = event.params.repayAmount
+  entity.param1 = event.params.param1
+  entity.burnAmount = event.params.burnAmount
+  entity.lastRepayTime = event.params.lastRepayTime
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
@@ -172,7 +191,9 @@ export function handleRequested(event: RequestedEvent): void {
   entity.index = event.params.index
   entity.amount = event.params.amount
   entity.tenure = event.params.tenure
+  entity.amountWithInterest = event.params.amountWithInterest
   entity.interestRate = event.params.interestRate
+  entity.repayAmountPerWindow = event.params.repayAmountPerWindow
   entity.repaymentWIndow = event.params.repaymentWIndow
 
   entity.blockNumber = event.block.number
@@ -202,7 +223,6 @@ export function handleSupplied(event: SuppliedEvent): void {
   )
   entity.lender = event.params.lender
   entity.lendAmount = event.params.lendAmount
-  entity.borrower = event.params.borrower
   entity.borrowIndex = event.params.borrowIndex
 
   entity.blockNumber = event.block.number
@@ -218,7 +238,6 @@ export function handleWithdraw(event: WithdrawEvent): void {
   )
   entity.by = event.params.by
   entity.borrowIndex = event.params.borrowIndex
-  entity.borrower = event.params.borrower
   entity.amount = event.params.amount
 
   entity.blockNumber = event.block.number

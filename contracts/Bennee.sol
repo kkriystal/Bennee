@@ -108,7 +108,9 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         uint256 index,
         uint256 amount,
         uint256 tenure,
+        uint256 amountWithInterest,
         uint256 interestRate,
+        uint256 repayAmountPerWindow,
         uint256 repaymentWIndow
     );
 
@@ -119,10 +121,10 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     event CancelledSupply(address lender, uint256 borrowIndex, uint256 cancelAmount);
 
     /// @dev Emitted when borrower borrowrs the amount
-    event Borrowed(address by, uint256 borrowIndex);
+    event Borrowed(address by, uint256 borrowIndex, uint256 endTime, uint256 mintedAmount);
 
     /// @dev Emitted when borrowers repay their repayment window
-    event Repaid(uint256 borrowerIndex, uint256 repayAmount);
+    event Repaid(uint256 borrowerIndex, uint256, uint256 lastRepayTime);
 
     /// @dev Emitted when lenders withdraw their repayment window
     event Withdraw(address by, uint256 borrowIndex, uint256 amount);
@@ -244,27 +246,20 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @param amountToBorrow The amount of asset user want to borrow
     /// @param tenure The time duration in days for which user wants to borrow
     /// @param repayWindow The repay window in days and it should be less than tenure
-    /// @param deadline The deadline is validity of the signature
-    /// @param v The `v` signature parameter
-    /// @param r The `r` signature parameter
-    /// @param s The `s` signature parameter
+
     function request(
         uint256 amountToBorrow,
         uint256 tenure,
-        uint256 repayWindow,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        uint256 repayWindow // uint256 deadline, // uint8 v, // bytes32 r, // bytes32 s
     ) external {
-        // The borrower must be authorised to request for loan
-         bytes32 encodedMessageHash = keccak256(
-            abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
-        );
+        // // The borrower must be authorised to request for loan
+        //  bytes32 encodedMessageHash = keccak256(
+        //     abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
+        // );
 
-        if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
-            revert InvalidSignature();
-        }
+        // if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
+        //     revert InvalidSignature();
+        // }
 
         uint256 currentIndex = index++;
 
@@ -277,6 +272,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         }
 
         uint256 perDayinterest = ((amountToBorrow * insuranceRatePPM) / ONE_YEAR_DAYS) / PPM;
+        uint256 repayAmountPerWindow = (amountToBorrow / tenure) + (repayWindow * perDayinterest);
         borrowInfo[currentIndex] = BorrowInfo({
             borrowAmount: amountToBorrow,
             insuranceRatePPM: insuranceRatePPM,
@@ -289,12 +285,21 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             startTime: 0,
             lastRepayTime: 0,
             repaidAmount: 0,
-            repayAmountPerWindow: (amountToBorrow / tenure) + (repayWindow * perDayinterest),
+            repayAmountPerWindow: repayAmountPerWindow,
             hasBorrowed: false,
             hasRepaid: false
         });
 
-        emit Requested(msg.sender, currentIndex, amountToBorrow, tenure, insuranceRatePPM, repayWindow);
+        emit Requested(
+            msg.sender,
+            currentIndex,
+            amountToBorrow,
+            tenure,
+            amountToBorrow + (perDayinterest * tenure),
+            insuranceRatePPM,
+            repayAmountPerWindow,
+            repayWindow
+        );
     }
 
     /// @notice Redeems borrow amount callable by borrower of that borrow index
@@ -314,13 +319,16 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             revert AlreadyBorrowed();
         }
 
+        uint256 endTime = block.timestamp + (info.tenure * ONE_DAY_SECONDS);
+        uint256 mintedAmount = (info.borrowAmount * fxRateToToken[ASSET]) / PPM;
+
         borrowInfo[borrowIndex].hasBorrowed = true;
         borrowInfo[borrowIndex].startTime = block.timestamp;
         borrowInfo[borrowIndex].lastRepayTime = block.timestamp;
-        borrowInfo[borrowIndex].endTime = block.timestamp + (info.tenure * ONE_DAY_SECONDS);
+        borrowInfo[borrowIndex].endTime = endTime;
         bennee.mint(msg.sender, (info.borrowAmount * fxRateToToken[ASSET]) / PPM);
 
-        emit Borrowed(msg.sender, borrowIndex);
+        emit Borrowed(msg.sender, borrowIndex, endTime, mintedAmount);
     }
 
     /// @notice Cancels borrow request only callable by borrower of borrow index
@@ -369,11 +377,14 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         }
 
         uint256 repayAmount = paymentWindowPassed * borrowerInfo.repayAmountPerWindow;
-        bennee.burn(msg.sender, (repayAmount * fxRateFromToken[ASSET]) / PPM);
+        ASSET.safeTransferFrom(msg.sender, address(this), repayAmount);
+        // uint256 burnAmount = (repayAmount * fxRateFromToken[ASSET]) / PPM;
+        uint256 lastRepayTime = paymentWindowPassed * borrowerInfo.repaymentWindow * ONE_DAY_SECONDS;
+        // bennee.burn(msg.sender, burnAmount);
         borrowInfo[borrowIndex].repaidAmount += repayAmount;
-        borrowInfo[borrowIndex].lastRepayTime += paymentWindowPassed * borrowerInfo.repaymentWindow * ONE_DAY_SECONDS;
+        borrowInfo[borrowIndex].lastRepayTime += lastRepayTime;
 
-        emit Repaid(borrowIndex, repayAmount);
+        emit Repaid(borrowIndex, repayAmount, lastRepayTime);
     }
 
     //------------------------ Lenders functions ---------------------------------//

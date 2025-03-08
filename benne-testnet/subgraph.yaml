@@ -8,9 +8,9 @@ dataSources:
     name: Bennee
     network: sepolia
     source:
-      address: "0x50613029cA140392744F8638D8D34aEF857a6D03"
+      address: "0x13edBE81C9F04628945552678B0438Cbd93FCA35"
       abi: Bennee
-      startBlock: 7302874
+      startBlock: 7858133
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -22,6 +22,7 @@ dataSources:
         - DefaultWithdraw
         - FxRateUpdated
         - FxSchedulerUpdated
+        - InsuranceRateUpdated
         - OwnershipTransferStarted
         - OwnershipTransferred
         - Repaid
@@ -33,30 +34,32 @@ dataSources:
         - name: Bennee
           file: ./abis/Bennee.json
       eventHandlers:
-        - event: Borrowed(address,uint256)
+        - event: Borrowed(address,uint256,uint256,uint256)
           handler: handleBorrowed
         - event: CancelledRequest(address,uint256)
           handler: handleCancelledRequest
-        - event: CancelledSupply(address,address,uint256,uint256)
+        - event: CancelledSupply(address,uint256,uint256)
           handler: handleCancelledSupply
-        - event: DefaultWithdraw(address,uint256,address,uint256)
+        - event: DefaultWithdraw(address,uint256,uint256)
           handler: handleDefaultWithdraw
         - event: FxRateUpdated(address,uint256)
           handler: handleFxRateUpdated
         - event: FxSchedulerUpdated(address,address)
           handler: handleFxSchedulerUpdated
+        - event: InsuranceRateUpdated(uint256,uint256)
+          handler: handleInsuranceRateUpdated
         - event: OwnershipTransferStarted(indexed address,indexed address)
           handler: handleOwnershipTransferStarted
         - event: OwnershipTransferred(indexed address,indexed address)
           handler: handleOwnershipTransferred
-        - event: Repaid(address,uint256,uint256)
+        - event: Repaid(uint256,uint256,uint256,uint256)
           handler: handleRepaid
-        - event: Requested(address,uint256,uint256,uint256,uint256,uint256)
+        - event: Requested(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleRequested
         - event: SignerUpdated(address,address)
           handler: handleSignerUpdated
-        - event: Supplied(address,uint256,address,uint256)
+        - event: Supplied(address,uint256,uint256)
           handler: handleSupplied
-        - event: Withdraw(address,uint256,address,uint256)
+        - event: Withdraw(address,uint256,uint256)
           handler: handleWithdraw
       file: ./src/bennee.ts

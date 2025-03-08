@@ -1,8 +1,8 @@
 {
   "sepolia": {
     "Bennee": {
-      "address": "0x50613029cA140392744F8638D8D34aEF857a6D03",
-      "startBlock": 7302874
+      "address": "0x13edBE81C9F04628945552678B0438Cbd93FCA35",
+      "startBlock": 7858133
     }
   }
 }

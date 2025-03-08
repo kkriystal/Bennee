@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 import { Test, console } from "forge-std/Test.sol";
 import { Bennee } from "../contracts/Bennee.sol";
+import { BenneToken } from "../contracts/BenneToken.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import { MockBennee } from "./MockBennee.sol";
 import { TestUsdt } from "./TestUsdt.sol";
 
 contract BenneeTest is Test {
@@ -16,7 +16,7 @@ contract BenneeTest is Test {
     using MessageHashUtils for bytes32;
 
     Bennee public bennee;
-    MockBennee public token;
+    BenneToken public token;
     TestUsdt public testUsdt;
 
     IERC20 ASSET;
@@ -54,7 +54,7 @@ contract BenneeTest is Test {
         SIGNER = vm.addr(privateKey);
         fxRate = 15 * PPM;
         fxPercentage = 30_000;
-        token = new MockBennee();
+        token = new BenneToken();
         testUsdt = new TestUsdt();
 
         ASSET = IERC20(address(testUsdt));

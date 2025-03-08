@@ -19,7 +19,14 @@ describe("Describe entity assertions", () => {
   beforeAll(() => {
     let by = Address.fromString("0x0000000000000000000000000000000000000001")
     let borrowIndex = BigInt.fromI32(234)
-    let newBorrowedEvent = createBorrowedEvent(by, borrowIndex)
+    let endTime = BigInt.fromI32(234)
+    let mintedAmount = BigInt.fromI32(234)
+    let newBorrowedEvent = createBorrowedEvent(
+      by,
+      borrowIndex,
+      endTime,
+      mintedAmount
+    )
     handleBorrowed(newBorrowedEvent)
   })
 
@@ -44,6 +51,18 @@ describe("Describe entity assertions", () => {
       "Borrowed",
       "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
       "borrowIndex",
+      "234"
+    )
+    assert.fieldEquals(
+      "Borrowed",
+      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
+      "endTime",
+      "234"
+    )
+    assert.fieldEquals(
+      "Borrowed",
+      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
+      "mintedAmount",
       "234"
     )
 
