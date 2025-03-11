@@ -8,9 +8,9 @@ dataSources:
     name: Bennee
     network: sepolia
     source:
-      address: "0x13edBE81C9F04628945552678B0438Cbd93FCA35"
+      address: "0xB1c15902d6505F55D4d3e674167bF0E5f4d3Baa4"
       abi: Bennee
-      startBlock: 7858133
+      startBlock: 7880902
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

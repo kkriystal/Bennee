@@ -124,7 +124,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     event Borrowed(address by, uint256 borrowIndex, uint256 endTime, uint256 mintedAmount);
 
     /// @dev Emitted when borrowers repay their repayment window
-    event Repaid(uint256 borrowerIndex, uint256, uint256 lastRepayTime);
+    event Repaid(uint256 borrowerIndex, uint256 repayAmount, uint256 burnAmount, uint256 lastRepayTime);
 
     /// @dev Emitted when lenders withdraw their repayment window
     event Withdraw(address by, uint256 borrowIndex, uint256 amount);
@@ -146,6 +146,9 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
 
     /// @dev Emitted when insurance rate is updated
     event InsuranceRateUpdated(uint256 oldInsuranceRate, uint256 newInsuranceRate);
+
+    /// @dev Emitted when token is asset is converted to token
+    event ConvertedToToken(address by, uint256 amount, uint256 convertedAmount);
 
     /// @notice Thrown when borrower borrows twice or lender cancels while borrower claimed the amount
     error AlreadyBorrowed();
@@ -246,20 +249,27 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @param amountToBorrow The amount of asset user want to borrow
     /// @param tenure The time duration in days for which user wants to borrow
     /// @param repayWindow The repay window in days and it should be less than tenure
-
+    /// @param deadline The deadline is validity of the signature
+    /// @param v The `v` signature parameter
+    /// @param r The `r` signature parameter
+    /// @param s The `s` signature parameter
     function request(
         uint256 amountToBorrow,
         uint256 tenure,
-        uint256 repayWindow // uint256 deadline, // uint8 v, // bytes32 r, // bytes32 s
+        uint256 repayWindow,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) external {
-        // // The borrower must be authorised to request for loan
-        //  bytes32 encodedMessageHash = keccak256(
-        //     abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
-        // );
+        // The borrower must be authorised to request for loan
+        bytes32 encodedMessageHash = keccak256(
+            abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
+        );
 
-        // if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
-        //     revert InvalidSignature();
-        // }
+        if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
+            revert InvalidSignature();
+        }
 
         uint256 currentIndex = index++;
 
@@ -272,7 +282,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         }
 
         uint256 perDayinterest = ((amountToBorrow * insuranceRatePPM) / ONE_YEAR_DAYS) / PPM;
-        uint256 repayAmountPerWindow = (amountToBorrow / tenure) + (repayWindow * perDayinterest);
+        uint256 repayAmountPerWindow = (amountToBorrow / (tenure / repayWindow)) + (repayWindow * perDayinterest);
         borrowInfo[currentIndex] = BorrowInfo({
             borrowAmount: amountToBorrow,
             insuranceRatePPM: insuranceRatePPM,
@@ -300,7 +310,10 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             repayAmountPerWindow,
             repayWindow
         );
+        perday.push(perDayinterest);
     }
+
+    uint[] public perday;
 
     /// @notice Redeems borrow amount callable by borrower of that borrow index
     /// @param borrowIndex The borrower request index
@@ -348,21 +361,19 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @notice Repays amount of the lender for the repay windows passed
     /// @param borrowIndex The borrower request index
     function repay(uint256 borrowIndex) external {
-        BorrowInfo memory borrowerInfo = borrowInfo[borrowIndex];
+        (
+            uint256 paymentWindowPassed,
+            uint256 repayAmount,
+            uint256 burnAmount,
+            uint256 lastRepayTime,
 
-        if (borrowerInfo.hasRepaid) {
-            revert AlreadyRepaid();
-        }
+        ) = calculateRepay(borrowIndex);
+
+        BorrowInfo memory borrowerInfo = borrowInfo[borrowIndex];
 
         if (borrowerInfo.borrower != msg.sender) {
             revert NotAllowed();
         }
-
-        uint256 paymentWindowPassed = (
-            block.timestamp >= borrowerInfo.endTime
-                ? (borrowerInfo.endTime - borrowerInfo.lastRepayTime)
-                : (block.timestamp - borrowerInfo.lastRepayTime)
-        ) / (ONE_DAY_SECONDS * borrowerInfo.repaymentWindow);
 
         if (block.timestamp >= borrowerInfo.endTime) {
             borrowInfo[borrowIndex].hasRepaid = true;
@@ -376,15 +387,56 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             loyalityPoints[msg.sender] += paymentWindowPassed - 1;
         }
 
-        uint256 repayAmount = paymentWindowPassed * borrowerInfo.repayAmountPerWindow;
         ASSET.safeTransferFrom(msg.sender, address(this), repayAmount);
-        // uint256 burnAmount = (repayAmount * fxRateFromToken[ASSET]) / PPM;
-        uint256 lastRepayTime = paymentWindowPassed * borrowerInfo.repaymentWindow * ONE_DAY_SECONDS;
-        // bennee.burn(msg.sender, burnAmount);
+        bennee.burn(msg.sender, burnAmount);
         borrowInfo[borrowIndex].repaidAmount += repayAmount;
-        borrowInfo[borrowIndex].lastRepayTime += lastRepayTime;
+        borrowInfo[borrowIndex].lastRepayTime = lastRepayTime;
 
-        emit Repaid(borrowIndex, repayAmount, lastRepayTime);
+        emit Repaid(borrowIndex, repayAmount, burnAmount, lastRepayTime);
+    }
+
+    function calculateRepay(
+        uint256 borrowIndex
+    )
+        public
+        view
+        returns (
+            uint256 paymentWindowPassed,
+            uint256 repayAmount,
+            uint256 burnAmount,
+            uint256 lastRepayTime,
+            uint256 remainingDebt
+        )
+    {
+        BorrowInfo memory borrowerInfo = borrowInfo[borrowIndex];
+
+        if (borrowerInfo.hasRepaid) {
+            revert AlreadyRepaid();
+        }
+
+        paymentWindowPassed =
+            (
+                block.timestamp >= borrowerInfo.endTime
+                    ? (borrowerInfo.endTime - borrowerInfo.lastRepayTime)
+                    : (block.timestamp - borrowerInfo.lastRepayTime)
+            ) /
+            (ONE_DAY_SECONDS * borrowerInfo.repaymentWindow);
+
+        repayAmount = paymentWindowPassed * borrowerInfo.repayAmountPerWindow;
+        burnAmount = (repayAmount * fxRateFromToken[ASSET]) / PPM;
+        lastRepayTime = paymentWindowPassed == 0
+            ? borrowerInfo.lastRepayTime
+            : borrowerInfo.lastRepayTime + (paymentWindowPassed * borrowerInfo.repaymentWindow * ONE_DAY_SECONDS);
+        remainingDebt = borrowerInfo.amountWithInterest - borrowerInfo.repaidAmount;
+    }
+
+    /// @notice Converts an asset to native currency
+    /// @param amount The asset amount to convert
+    function convertToToken(uint256 amount) external {
+        ASSET.safeTransferFrom(msg.sender, address(this), amount);
+        uint256 convertedAmount = (amount * fxRateFromToken[ASSET]) / PPM;
+        bennee.mint(msg.sender, convertedAmount);
+        emit ConvertedToToken(msg.sender, amount, convertedAmount);
     }
 
     //------------------------ Lenders functions ---------------------------------//
@@ -440,6 +492,28 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
 
             emit DefaultWithdraw(msg.sender, borrowIndex, share);
         }
+    }
+
+    function calculateWithdraw(uint256 borrowIndex, address lender) external view returns (uint amount, uint256 share) {
+        LendInfo memory lenderInfo = lendInfo[borrowIndex][lender];
+        BorrowInfo memory borrowerInfo = borrowInfo[borrowIndex];
+
+        share = (borrowerInfo.repaidAmount * lenderInfo.lendAmount) / borrowerInfo.borrowAmount;
+
+        if (lenderInfo.accruedAmount < share) {
+            amount = share - lenderInfo.accruedAmount;
+        } else {
+            amount = 0;
+        }
+
+        uint256 paymentWindowPassed = (
+            block.timestamp >= borrowerInfo.endTime
+                ? (borrowerInfo.endTime - borrowerInfo.startTime)
+                : (block.timestamp - borrowerInfo.startTime)
+        ) / (ONE_DAY_SECONDS * borrowerInfo.repaymentWindow);
+        uint256 totalAmount = (paymentWindowPassed * borrowerInfo.repayAmountPerWindow * lenderInfo.lendAmount) /
+            borrowerInfo.borrowAmount;
+        share = totalAmount - lendInfo[borrowIndex][lender].accruedAmount;
     }
 
     /// @notice Cancels supply for the borrower, if borrower has not claimed amount

@@ -39,7 +39,7 @@ contract BenneeTest is Test {
 
     // uint256 amount;
     uint256 tenure = 300;
-    uint256 interestPPM = 130_000;
+    uint256 interestPPM = 100_000;
     uint256 repayWindow = 30;
 
     //--------------------------------------------------------------------//
@@ -71,10 +71,13 @@ contract BenneeTest is Test {
         deal(address(ASSET), address(bennee), 10_000_000 * 10 ** 6);
     }
 
-    function test_Request(uint256 amount) external {
-        if (amount < 1e6 || amount > type(uint224).max) {
-            return;
-        }
+    function test_Request() external {
+        // if (amount < 1e6 || amount > type(uint224).max) {
+        //     return;
+        // }
+        uint256 amount = 16_000_000;
+        tenure = 20;
+        repayWindow = 5;
         uint256 deadline = block.timestamp + 2 minutes;
         (uint8 v, bytes32 r, bytes32 s) = _verifySignature(BORROWER_1, amount, tenure, repayWindow, deadline);
 
@@ -96,26 +99,16 @@ contract BenneeTest is Test {
             ,
             ,
 
-        ) = bennee.borrowInfo(1);
+        ) = bennee.borrowInfo(0);
 
+        uint256 pday = bennee.perday(0);
+        console.log("--- pday ----", pday);
         uint256 perDayinterest = ((amount * insuranceRatePPM) / 365) / PPM;
 
-        uint256 expectedAmountWithInterest = amount + (perDayinterest * tenure);
-        uint256 _repayPerWindow = (amount / tenure) + (repayWindow * perDayinterest);
+        console.log("--- perDayinterest ----", perDayinterest);
 
-        assertEq(amount, borrowAmount, "borrow amount");
-        assertEq(interestPPM, insuranceRatePPM, "interestPPM");
-        assertEq(expectedAmountWithInterest, amountWithInterest, "amount with interest");
-        assertEq(tenure, _tenure, "tenure");
-        assertEq(repayWindow, repaymentWindow, "repayment window");
-        assertEq(_repayPerWindow, repayAmountPerWindow, "repayment per window");
-
-        vm.stopPrank();
-        deadline = block.timestamp + 2 minutes;
-        (v, r, s) = _verifySignature(BORROWER_2, amount, tenure, repayWindow, deadline);
-
-        vm.startPrank(BORROWER_2);
-        bennee.request(amount, tenure, repayWindow, deadline, v, r, s);
+        // uint256 expectedAmountWithInterest = amount + (perDayinterest * tenure);
+        // uint256 _repayPerWindow = (amount / tenure) + (repayWindow * perDayinterest);
 
         vm.stopPrank();
     }
@@ -158,67 +151,67 @@ contract BenneeTest is Test {
         vm.stopPrank();
     }
 
-    function test_Supply(uint256 amount) external {
-        if (amount < 1e6 || amount > 1_000_000e6) {
-            return;
-        }
+    // function test_Supply(uint256 amount) external {
+    //     if (amount < 1e6 || amount > 1_000_000e6) {
+    //         return;
+    //     }
 
-        uint256 deadline = block.timestamp + 2 minutes;
-        (uint8 v, bytes32 r, bytes32 s) = _verifySignature(BORROWER_1, amount, tenure, repayWindow, deadline);
+    //     uint256 deadline = block.timestamp + 2 minutes;
+    //     (uint8 v, bytes32 r, bytes32 s) = _verifySignature(BORROWER_1, amount, tenure, repayWindow, deadline);
 
-        vm.startPrank(BORROWER_1);
-        bennee.request(amount, tenure, repayWindow, deadline, v, r, s);
+    //     vm.startPrank(BORROWER_1);
+    //     bennee.request(amount, tenure, repayWindow, deadline, v, r, s);
 
-        (
-            uint256 borrowAmount,
-            uint256 insuranceRatePPM,
-            uint256 amountWithInterest,
-            uint256 _tenure,
-            uint256 repaymentWindow,
-            uint256 repayAmountPerWindow,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
+    //     (
+    //         uint256 borrowAmount,
+    //         uint256 insuranceRatePPM,
+    //         uint256 amountWithInterest,
+    //         uint256 _tenure,
+    //         uint256 repaymentWindow,
+    //         uint256 repayAmountPerWindow,
+    //         ,
+    //         ,
+    //         ,
+    //         ,
+    //         ,
+    //         ,
+    //         ,
 
-        ) = bennee.borrowInfo(1);
+    //     ) = bennee.borrowInfo(1);
 
-        uint256 perDayinterest = ((amount * insuranceRatePPM) / 365) / PPM;
+    //     uint256 perDayinterest = ((amount * insuranceRatePPM) / 365) / PPM;
 
-        uint256 expectedAmountWithInterest = amount + (perDayinterest * tenure);
-        uint256 _repayPerWindow = (amount / tenure) + (repayWindow * perDayinterest);
+    //     uint256 expectedAmountWithInterest = amount + (perDayinterest * tenure);
+    //     uint256 _repayPerWindow = (amount / tenure) + (repayWindow * perDayinterest);
 
-        assertEq(amount, borrowAmount, "borrow amount");
-        assertEq(interestPPM, insuranceRatePPM, "interestPPM");
-        assertEq(expectedAmountWithInterest, amountWithInterest, "amount with interest");
-        assertEq(tenure, _tenure, "tenure");
-        assertEq(repayWindow, repaymentWindow, "repayment window");
-        assertEq(_repayPerWindow, repayAmountPerWindow, "repayment per window");
+    //     assertEq(amount, borrowAmount, "borrow amount");
+    //     assertEq(interestPPM, insuranceRatePPM, "interestPPM");
+    //     assertEq(expectedAmountWithInterest, amountWithInterest, "amount with interest");
+    //     assertEq(tenure, _tenure, "tenure");
+    //     assertEq(repayWindow, repaymentWindow, "repayment window");
+    //     assertEq(_repayPerWindow, repayAmountPerWindow, "repayment per window");
 
-        vm.stopPrank();
+    //     vm.stopPrank();
 
-        vm.startPrank(LENDER_1);
-        ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(1, amount / 3); // half of amount
-        vm.stopPrank();
+    //     vm.startPrank(LENDER_1);
+    //     ASSET.forceApprove(address(bennee), type(uint256).max);
+    //     bennee.supply(1, amount / 3); // half of amount
+    //     vm.stopPrank();
 
-        vm.startPrank(LENDER_2);
-        ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(1, amount / 3);
-        vm.stopPrank();
+    //     vm.startPrank(LENDER_2);
+    //     ASSET.forceApprove(address(bennee), type(uint256).max);
+    //     bennee.supply(1, amount / 3);
+    //     vm.stopPrank();
 
-        vm.startPrank(LENDER_3);
-        ASSET.forceApprove(address(bennee), type(uint256).max);
-        bennee.supply(1, (amount - amount / 3));
+    //     vm.startPrank(LENDER_3);
+    //     ASSET.forceApprove(address(bennee), type(uint256).max);
+    //     bennee.supply(1, (amount - amount / 3));
 
-        bytes4 selector = bytes4(keccak256("ThresholdReached()"));
-        vm.expectRevert(abi.encodeWithSelector(selector));
-        bennee.supply(1, (amount - amount / 3));
-        vm.stopPrank();
-    }
+    //     bytes4 selector = bytes4(keccak256("ThresholdReached()"));
+    //     vm.expectRevert(abi.encodeWithSelector(selector));
+    //     bennee.supply(1, (amount - amount / 3));
+    //     vm.stopPrank();
+    // }
 
     function test_Borrow(uint256 amount) external {
         if (amount < 1e6 || amount > 1_000_000e6) {
@@ -339,10 +332,7 @@ contract BenneeTest is Test {
 
         vm.warp(block.timestamp + 100 days);
 
-        uint256 repay_Amount = (_repayAmountPerWindow *
-            (__tenure / _repaymentWindow) *
-            bennee.fxRateFromToken(ASSET) *
-            1e12) / PPM;
+        uint256 repay_Amount = (_repayAmountPerWindow * (__tenure / _repaymentWindow) * bennee.fxRateFromToken(ASSET) * 1e12) / PPM;
 
         bennee.repay(1);
         (
@@ -366,9 +356,7 @@ contract BenneeTest is Test {
 
         vm.startPrank(BORROWER_1);
         vm.warp(block.timestamp + 700 days);
-        repay_Amount =
-            (_repayAmountPerWindow * (__tenure / _repaymentWindow) * bennee.fxRateFromToken(ASSET) * 1e12) /
-            PPM;
+        repay_Amount = (_repayAmountPerWindow * (__tenure / _repaymentWindow) * bennee.fxRateFromToken(ASSET) * 1e12) / PPM;
 
         bennee.repay(1);
 

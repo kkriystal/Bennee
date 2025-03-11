@@ -239,7 +239,7 @@ export function createOwnershipTransferredEvent(
 
 export function createRepaidEvent(
   borrowerIndex: BigInt,
-  param1: BigInt,
+  repayAmount: BigInt,
   burnAmount: BigInt,
   lastRepayTime: BigInt
 ): Repaid {
@@ -254,7 +254,7 @@ export function createRepaidEvent(
     )
   )
   repaidEvent.parameters.push(
-    new ethereum.EventParam("param1", ethereum.Value.fromUnsignedBigInt(param1))
+    new ethereum.EventParam("repayAmount", ethereum.Value.fromUnsignedBigInt(repayAmount))
   )
   repaidEvent.parameters.push(
     new ethereum.EventParam(

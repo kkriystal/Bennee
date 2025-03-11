@@ -1,3 +1,4 @@
+import { BigDecimal, BigInt, store } from "@graphprotocol/graph-ts"
 import {
   Borrowed as BorrowedEvent,
   CancelledRequest as CancelledRequestEvent,
@@ -45,21 +46,17 @@ export function handleBorrowed(event: BorrowedEvent): void {
   entity.transactionHash = event.transaction.hash
 
   entity.save()
+
+  let _id = event.params.borrowIndex.toString()
+  let requestedEntity = Requested.load(_id)
+  if (requestedEntity) {
+    requestedEntity.hasBorrowed = true;
+    requestedEntity.save()
+  }
 }
 
-export function handleCancelledRequest(event: CancelledRequestEvent): void {
-  let entity = new CancelledRequest(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.by = event.params.by
-  entity.borrowIndex = event.params.borrowIndex
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
+// when borrowed, total remaining debt, payable debt, last repayment. 
+// when cancel lend, percentage should be reduced too
 
 export function handleCancelledSupply(event: CancelledSupplyEvent): void {
   let entity = new CancelledSupply(
@@ -74,6 +71,15 @@ export function handleCancelledSupply(event: CancelledSupplyEvent): void {
   entity.transactionHash = event.transaction.hash
 
   entity.save()
+
+  let _id = event.params.borrowIndex.toString()
+  let requestedEntity = Requested.load(_id)
+  if (requestedEntity) {
+    requestedEntity.liquidity = requestedEntity.liquidity.minus(event.params.cancelAmount);
+    requestedEntity.liquidityPercentage = (requestedEntity.liquidity.toBigDecimal().times(BigDecimal.fromString('100'))).div(requestedEntity.amount.toBigDecimal())
+    requestedEntity.save()
+  }
+
 }
 
 export function handleDefaultWithdraw(event: DefaultWithdrawEvent): void {
@@ -172,7 +178,7 @@ export function handleRepaid(event: RepaidEvent): void {
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
   entity.borrowerIndex = event.params.borrowerIndex
-  entity.param1 = event.params.param1
+  entity.repayAmount = event.params.repayAmount
   entity.burnAmount = event.params.burnAmount
   entity.lastRepayTime = event.params.lastRepayTime
 
@@ -185,7 +191,7 @@ export function handleRepaid(event: RepaidEvent): void {
 
 export function handleRequested(event: RequestedEvent): void {
   let entity = new Requested(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
+    event.params.index.toString()
   )
   entity.user = event.params.user
   entity.index = event.params.index
@@ -195,12 +201,31 @@ export function handleRequested(event: RequestedEvent): void {
   entity.interestRate = event.params.interestRate
   entity.repayAmountPerWindow = event.params.repayAmountPerWindow
   entity.repaymentWIndow = event.params.repaymentWIndow
+  entity.liquidity = BigInt.fromI32(0)
+  entity.blockNumber = event.block.number
+  entity.blockTimestamp = event.block.timestamp
+  entity.transactionHash = event.transaction.hash
+  entity.hasBorrowed = false;
+  entity.liquidityPercentage = BigDecimal.fromString('0')
+  entity.save()
+}
+
+export function handleCancelledRequest(event: CancelledRequestEvent): void {
+  let entity = new CancelledRequest(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+  entity.by = event.params.by
+  entity.borrowIndex = event.params.borrowIndex
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
 
   entity.save()
+
+  let _id = event.params.borrowIndex.toString()
+  store.remove('Requested', _id);
+
 }
 
 export function handleSignerUpdated(event: SignerUpdatedEvent): void {
@@ -224,13 +249,22 @@ export function handleSupplied(event: SuppliedEvent): void {
   entity.lender = event.params.lender
   entity.lendAmount = event.params.lendAmount
   entity.borrowIndex = event.params.borrowIndex
-
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
 
+  let _id = event.params.borrowIndex.toString()
+
+  let requestedEntity = Requested.load(_id)
+  if (requestedEntity) {
+    requestedEntity.liquidity = requestedEntity.liquidity.plus(event.params.lendAmount)
+    requestedEntity.liquidityPercentage = (requestedEntity.liquidity.toBigDecimal().times(BigDecimal.fromString('100'))).div(requestedEntity.amount.toBigDecimal())
+    entity.borrower = requestedEntity.user;
+    requestedEntity.save()
+  }
   entity.save()
 }
+
 
 export function handleWithdraw(event: WithdrawEvent): void {
   let entity = new Withdraw(
