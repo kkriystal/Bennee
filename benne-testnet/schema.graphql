@@ -142,3 +142,15 @@ type Withdraw @entity(immutable: true) {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+
+type LenderInfo @entity (immutable:false){
+id: Bytes!
+lender: Bytes! # address
+ borrowIndex: BigInt! # uint256
+netWorth: BigInt!
+totalLend: BigInt!
+interestEarned: BigInt!
+netAPY: BigInt!
+totalDefault: BigInt!
+}

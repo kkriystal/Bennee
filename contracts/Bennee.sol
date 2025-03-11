@@ -310,10 +310,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             repayAmountPerWindow,
             repayWindow
         );
-        perday.push(perDayinterest);
     }
-
-    uint[] public perday;
 
     /// @notice Redeems borrow amount callable by borrower of that borrow index
     /// @param borrowIndex The borrower request index
