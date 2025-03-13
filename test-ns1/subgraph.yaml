@@ -5,11 +5,11 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum
-    name: Bennee
+    name: A
     network: holesky
     source:
       address: "0xF2414E7506AEf59C3b0b3A9Fc2B0537a9521f8E0"
-      abi: Bennee
+      abi: A
       startBlock: 3482450
     mapping:
       kind: ethereum/events
@@ -19,6 +19,7 @@ dataSources:
         - Borrowed
         - CancelledRequest
         - CancelledSupply
+        - ConvertedToToken
         - DefaultWithdraw
         - FxRateUpdated
         - FxSchedulerUpdated
@@ -30,8 +31,8 @@ dataSources:
         - Supplied
         - Withdraw
       abis:
-        - name: Bennee
-          file: ./abis/Bennee.json
+        - name: A
+          file: ./abis/A.json
       eventHandlers:
         - event: Borrowed(address,uint256,uint256,uint256)
           handler: handleBorrowed
@@ -39,6 +40,8 @@ dataSources:
           handler: handleCancelledRequest
         - event: CancelledSupply(address,uint256,uint256)
           handler: handleCancelledSupply
+        - event: ConvertedToToken(address,uint256,uint256)
+          handler: handleConvertedToToken
         - event: DefaultWithdraw(address,uint256,uint256)
           handler: handleDefaultWithdraw
         - event: FxRateUpdated(address,uint256)
@@ -59,4 +62,4 @@ dataSources:
           handler: handleSupplied
         - event: Withdraw(address,uint256,uint256)
           handler: handleWithdraw
-      file: ./src/bennee.ts
+      file: ./src/a.ts

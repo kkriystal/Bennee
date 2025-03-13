@@ -30,7 +30,7 @@ async function main() {
   const assetAddress = process.env.ASSET_ADDRESS
   const owner = process.env.OWNER
   const signerAddress = process.env.SIGNER
-  const insuranceRateInitPPM = process.env.INSURANCE_RATE_INIT_PPM
+  // const insuranceRateInitPPM = process.env.INSURANCE_RATE_INIT_PPM
   const fxRatePPMInit = process.env.FX_RATE_INIT_PPM
   const fxRatePercentage = process.env.FX_RATE_PERCENTAGE
 
@@ -38,7 +38,6 @@ async function main() {
     assetAddress,
     owner,
     signerAddress,
-    insuranceRateInitPPM,
     fxRatePPMInit,
     fxRatePercentage]);
 
@@ -51,7 +50,6 @@ async function main() {
     assetAddress,
     owner,
     signerAddress,
-    insuranceRateInitPPM,
     fxRatePPMInit,
     fxRatePercentage]);
 

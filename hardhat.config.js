@@ -7,6 +7,7 @@ module.exports = {
       {
         version: "0.8.28",
         settings: {
+          viaIR: true,
           optimizer: {
             enabled: true,
             runs: 1000000,
@@ -19,6 +20,10 @@ module.exports = {
   networks: {
     sepolia: {
       url: process.env.URL_SEPOLIA,
+      accounts: [process.env.PRIVATE_KEY_SEPOLIA],
+    },
+    holesky: {
+      url: process.env.URL_HOLESKY,
       accounts: [process.env.PRIVATE_KEY_SEPOLIA],
     },
   },

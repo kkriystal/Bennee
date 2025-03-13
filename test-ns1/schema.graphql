@@ -28,6 +28,16 @@ type CancelledSupply @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
+type ConvertedToToken @entity(immutable: true) {
+  id: Bytes!
+  by: Bytes! # address
+  amount: BigInt! # uint256
+  convertedAmount: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 type DefaultWithdraw @entity(immutable: true) {
   id: Bytes!
   by: Bytes! # address
@@ -86,8 +96,8 @@ type Repaid @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
-type Requested @entity(immutable: false) {
-  id: ID!
+type Requested @entity(immutable: true) {
+  id: Bytes!
   user: Bytes! # address
   index: BigInt! # uint256
   amount: BigInt! # uint256
@@ -99,10 +109,6 @@ type Requested @entity(immutable: false) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-  liquidity: BigInt!
-  liquidityPercentage: BigDecimal!
-  hasBorrowed: Boolean!
-
 }
 
 type SignerUpdated @entity(immutable: true) {
@@ -117,7 +123,6 @@ type SignerUpdated @entity(immutable: true) {
 type Supplied @entity(immutable: true) {
   id: Bytes!
   lender: Bytes! # address
-  borrower: Bytes! # address
   lendAmount: BigInt! # uint256
   borrowIndex: BigInt! # uint256
   blockNumber: BigInt!
@@ -133,27 +138,4 @@ type Withdraw @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
-}
-
-
-
-type LenderInfo @entity (immutable:false){
-id: ID!
- by: Bytes! # address
-  withdrawAmount: BigInt! # uint256
-  defaultAmount: BigInt! # uint256
-  apy: BigDecimal!
-  interestEarned: BigDecimal! # uint256
-  totalLend: BigInt! # uint256
-}
-
-type BorrowerInfo @entity (immutable:false){
-  id: ID!
-  by: Bytes! # address
-  totalBorrow: BigInt! # uint256
-  totalBorrowWithInterest: BigInt! # uint256
-  interestPaid: BigInt! # uint256
-  apy: BigInt!
-  totalRepaid: BigInt!
-  totalInterestRepaid: BigInt!
 }

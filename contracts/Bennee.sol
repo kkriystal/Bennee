@@ -61,7 +61,11 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     uint256 private constant ONE_YEAR_DAYS = 365;
 
     /// @dev The one day time in seconds
-    uint256 private constant ONE_DAY_SECONDS = 86400;
+    uint256 public ONE_DAY_SECONDS = 60;
+
+    function updateOnedayseconds(uint256 newVal) external {
+        ONE_DAY_SECONDS = newVal;
+    }
 
     /// @notice The percentage value helps in calculating fxRate
     uint256 public immutable fxRatePercentage;
@@ -78,8 +82,8 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @notice The address of fxScheduler wallet
     address public fxScheduler;
 
-    /// @notice The insurance rate that borrowers will pay
-    uint256 public insuranceRatePPM;
+    // /// @notice The insurance rate that borrowers will pay
+    // uint256 public insuranceRatePPM;
 
     /// @notice The last timeStamp when fxScheduler updated the fxRate
     uint256 public timestampFx;
@@ -124,7 +128,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     event Borrowed(address by, uint256 borrowIndex, uint256 endTime, uint256 mintedAmount);
 
     /// @dev Emitted when borrowers repay their repayment window
-    event Repaid(uint256 borrowerIndex, uint256 repayAmount, uint256 burnAmount, uint256 lastRepayTime);
+    event Repaid(address by, uint256 borrowerIndex, uint256 repayAmount, uint256 burnAmount, uint256 lastRepayTime);
 
     /// @dev Emitted when lenders withdraw their repayment window
     event Withdraw(address by, uint256 borrowIndex, uint256 amount);
@@ -144,8 +148,8 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @dev Emitted when fxRate is updated
     event FxRateUpdated(address scheduler, uint256 fxRate);
 
-    /// @dev Emitted when insurance rate is updated
-    event InsuranceRateUpdated(uint256 oldInsuranceRate, uint256 newInsuranceRate);
+    // /// @dev Emitted when insurance rate is updated
+    // event InsuranceRateUpdated(uint256 oldInsuranceRate, uint256 newInsuranceRate);
 
     /// @dev Emitted when token is asset is converted to token
     event ConvertedToToken(address by, uint256 amount, uint256 convertedAmount);
@@ -212,7 +216,6 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @param assetAddress The asset is the token used to lend and borrow
     /// @param owner The address of owner wallet
     /// @param signerAddress The address of signer wallet
-    /// @param insuranceRateInitPPM The insurance rate in PPM
     /// @param fxRatePPMInit The exchange rate in PPM
     /// @param fxRatePercentagePPMInit The exchange rate percentage
     constructor(
@@ -220,7 +223,6 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         IERC20 assetAddress,
         address owner,
         address signerAddress,
-        uint256 insuranceRateInitPPM,
         uint256 fxRatePPMInit,
         uint256 fxRatePercentagePPMInit
     )
@@ -229,14 +231,13 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         checkAddressZero(address(assetAddress))
         checkAddressZero(signerAddress)
     {
-        if (insuranceRateInitPPM == 0 || fxRatePPMInit == 0 || fxRatePercentagePPMInit == 0) {
+        if (fxRatePPMInit == 0 || fxRatePercentagePPMInit == 0) {
             revert ZeroValue();
         }
 
         ASSET = assetAddress;
         bennee = IBennee(benneeAddress);
         signer = signerAddress;
-        insuranceRatePPM = insuranceRateInitPPM;
         fxRateToToken[ASSET] = fxRatePPMInit - ((fxRatePPMInit * fxRatePercentagePPMInit) / PPM);
         fxRateFromToken[ASSET] = fxRatePPMInit + (fxRatePPMInit * fxRatePercentagePPMInit) / PPM;
         fxRatePercentage = fxRatePercentagePPMInit;
@@ -249,27 +250,16 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @param amountToBorrow The amount of asset user want to borrow
     /// @param tenure The time duration in days for which user wants to borrow
     /// @param repayWindow The repay window in days and it should be less than tenure
-    /// @param deadline The deadline is validity of the signature
-    /// @param v The `v` signature parameter
-    /// @param r The `r` signature parameter
-    /// @param s The `s` signature parameter
-    function request(
-        uint256 amountToBorrow,
-        uint256 tenure,
-        uint256 repayWindow,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
-        // The borrower must be authorised to request for loan
-        bytes32 encodedMessageHash = keccak256(
-            abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
-        );
 
-        if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
-            revert InvalidSignature();
-        }
+    function request(uint256 amountToBorrow, uint256 tenure, uint256 repayWindow, uint256 interestRate) external {
+        // // The borrower must be authorised to request for loan
+        // bytes32 encodedMessageHash = keccak256(
+        //     abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
+        // );
+
+        // if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
+        //     revert InvalidSignature();
+        // }
 
         uint256 currentIndex = index++;
 
@@ -281,11 +271,11 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             revert InvalidRepayWindow();
         }
 
-        uint256 perDayinterest = ((amountToBorrow * insuranceRatePPM) / ONE_YEAR_DAYS) / PPM;
+        uint256 perDayinterest = ((amountToBorrow * interestRate) / ONE_YEAR_DAYS) / PPM;
         uint256 repayAmountPerWindow = (amountToBorrow / (tenure / repayWindow)) + (repayWindow * perDayinterest);
         borrowInfo[currentIndex] = BorrowInfo({
             borrowAmount: amountToBorrow,
-            insuranceRatePPM: insuranceRatePPM,
+            insuranceRatePPM: interestRate,
             amountWithInterest: amountToBorrow + (perDayinterest * tenure),
             tenure: tenure,
             endTime: 0,
@@ -306,7 +296,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             amountToBorrow,
             tenure,
             amountToBorrow + (perDayinterest * tenure),
-            insuranceRatePPM,
+            interestRate,
             repayAmountPerWindow,
             repayWindow
         );
@@ -336,7 +326,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         borrowInfo[borrowIndex].startTime = block.timestamp;
         borrowInfo[borrowIndex].lastRepayTime = block.timestamp;
         borrowInfo[borrowIndex].endTime = endTime;
-        bennee.mint(msg.sender, (info.borrowAmount * fxRateToToken[ASSET]) / PPM);
+        bennee.mint(msg.sender, (info.borrowAmount * (10 ** 12) * fxRateToToken[ASSET]) / PPM);
 
         emit Borrowed(msg.sender, borrowIndex, endTime, mintedAmount);
     }
@@ -389,7 +379,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         borrowInfo[borrowIndex].repaidAmount += repayAmount;
         borrowInfo[borrowIndex].lastRepayTime = lastRepayTime;
 
-        emit Repaid(borrowIndex, repayAmount, burnAmount, lastRepayTime);
+        emit Repaid(msg.sender, borrowIndex, repayAmount, burnAmount, lastRepayTime);
     }
 
     function calculateRepay(
@@ -420,7 +410,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             (ONE_DAY_SECONDS * borrowerInfo.repaymentWindow);
 
         repayAmount = paymentWindowPassed * borrowerInfo.repayAmountPerWindow;
-        burnAmount = (repayAmount * fxRateFromToken[ASSET]) / PPM;
+        burnAmount = (repayAmount * (10 ** 12) * fxRateFromToken[ASSET]) / PPM;
         lastRepayTime = paymentWindowPassed == 0
             ? borrowerInfo.lastRepayTime
             : borrowerInfo.lastRepayTime + (paymentWindowPassed * borrowerInfo.repaymentWindow * ONE_DAY_SECONDS);
@@ -431,7 +421,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @param amount The asset amount to convert
     function convertToToken(uint256 amount) external {
         ASSET.safeTransferFrom(msg.sender, address(this), amount);
-        uint256 convertedAmount = (amount * fxRateFromToken[ASSET]) / PPM;
+        uint256 convertedAmount = (amount * (10 ** 12) * fxRateFromToken[ASSET]) / PPM;
         bennee.mint(msg.sender, convertedAmount);
         emit ConvertedToToken(msg.sender, amount, convertedAmount);
     }
@@ -491,11 +481,25 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
         }
     }
 
-    function calculateWithdraw(uint256 borrowIndex, address lender) external view returns (uint amount, uint256 share) {
+    function calculateWithdraw(
+        uint256 borrowIndex,
+        address lender
+    )
+        external
+        view
+        returns (
+            uint256 totalAmount,
+            uint256 amountAccrued,
+            uint256 amount,
+            uint256 defaultAmount,
+            uint256 paymentWindowPassed,
+            uint256 repayAmountPerWindow
+        )
+    {
         LendInfo memory lenderInfo = lendInfo[borrowIndex][lender];
         BorrowInfo memory borrowerInfo = borrowInfo[borrowIndex];
 
-        share = (borrowerInfo.repaidAmount * lenderInfo.lendAmount) / borrowerInfo.borrowAmount;
+        uint256 share = (borrowerInfo.repaidAmount * lenderInfo.lendAmount) / borrowerInfo.borrowAmount;
 
         if (lenderInfo.accruedAmount < share) {
             amount = share - lenderInfo.accruedAmount;
@@ -503,14 +507,19 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
             amount = 0;
         }
 
-        uint256 paymentWindowPassed = (
-            block.timestamp >= borrowerInfo.endTime
-                ? (borrowerInfo.endTime - borrowerInfo.startTime)
-                : (block.timestamp - borrowerInfo.startTime)
-        ) / (ONE_DAY_SECONDS * borrowerInfo.repaymentWindow);
-        uint256 totalAmount = (paymentWindowPassed * borrowerInfo.repayAmountPerWindow * lenderInfo.lendAmount) /
+        paymentWindowPassed =
+            (
+                block.timestamp >= borrowerInfo.endTime
+                    ? (borrowerInfo.endTime - borrowerInfo.startTime)
+                    : (block.timestamp - borrowerInfo.startTime)
+            ) /
+            (ONE_DAY_SECONDS * borrowerInfo.repaymentWindow);
+        totalAmount =
+            (paymentWindowPassed * borrowerInfo.repayAmountPerWindow * lenderInfo.lendAmount) /
             borrowerInfo.borrowAmount;
-        share = totalAmount - lendInfo[borrowIndex][lender].accruedAmount;
+        defaultAmount = totalAmount - lendInfo[borrowIndex][lender].accruedAmount;
+        repayAmountPerWindow = borrowerInfo.repayAmountPerWindow;
+        amountAccrued = lendInfo[borrowIndex][lender].accruedAmount;
     }
 
     /// @notice Cancels supply for the borrower, if borrower has not claimed amount
@@ -583,19 +592,6 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
 
         emit FxSchedulerUpdated({ oldFxScheduler: oldFxScheduler, newFxSchedulerAddress: newFxSchedulerAddress });
         fxScheduler = newFxSchedulerAddress;
-    }
-
-    /// @notice Changes the insurance rate
-    /// @param newInsuranceRatePPM The new insrurance rate
-    function changeInsuranceRate(uint256 newInsuranceRatePPM) external onlyOwner {
-        uint256 oldInsuranceRate = insuranceRatePPM;
-
-        if (oldInsuranceRate == newInsuranceRatePPM) {
-            revert IdenticalValue();
-        }
-
-        emit InsuranceRateUpdated({ oldInsuranceRate: oldInsuranceRate, newInsuranceRate: newInsuranceRatePPM });
-        insuranceRatePPM = newInsuranceRatePPM;
     }
 
     /// @dev Checks zero address, if zero then reverts

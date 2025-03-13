@@ -1,8 +1,8 @@
-import { BigDecimal, BigInt, store } from "@graphprotocol/graph-ts"
 import {
   Borrowed as BorrowedEvent,
   CancelledRequest as CancelledRequestEvent,
   CancelledSupply as CancelledSupplyEvent,
+  ConvertedToToken as ConvertedToTokenEvent,
   DefaultWithdraw as DefaultWithdrawEvent,
   FxRateUpdated as FxRateUpdatedEvent,
   FxSchedulerUpdated as FxSchedulerUpdatedEvent,
@@ -13,11 +13,12 @@ import {
   SignerUpdated as SignerUpdatedEvent,
   Supplied as SuppliedEvent,
   Withdraw as WithdrawEvent
-} from "../generated/Bennee/Bennee"
+} from "../generated/A/A"
 import {
   Borrowed,
   CancelledRequest,
   CancelledSupply,
+  ConvertedToToken,
   DefaultWithdraw,
   FxRateUpdated,
   FxSchedulerUpdated,
@@ -27,12 +28,8 @@ import {
   Requested,
   SignerUpdated,
   Supplied,
-  Withdraw,
-  LenderInfo,
-  BorrowerInfo,
+  Withdraw
 } from "../generated/schema"
-
-const PPM = 1000000;
 
 export function handleBorrowed(event: BorrowedEvent): void {
   let entity = new Borrowed(
@@ -48,63 +45,20 @@ export function handleBorrowed(event: BorrowedEvent): void {
   entity.transactionHash = event.transaction.hash
 
   entity.save()
-
-  let _id = event.params.borrowIndex.toString()
-  let requestedEntity = Requested.load(_id)
-
-  let __id = event.params.by.toHexString()
-  let bI = BorrowerInfo.load(__id);
-
-  if (!bI) {
-    bI = new BorrowerInfo(__id);
-    if (requestedEntity) {
-      requestedEntity.hasBorrowed = true;
-      bI.by = event.params.by
-      bI.totalBorrow = requestedEntity.amount
-      bI.totalBorrowWithInterest = requestedEntity.amountWithInterest
-      bI.interestPaid = BigInt.fromI32(0)
-      bI.apy = requestedEntity.interestRate
-      bI.totalRepaid = BigInt.fromI32(0)
-      bI.totalInterestRepaid = BigInt.fromI32(0)
-      requestedEntity.save()
-    }
-    bI.save()
-  } else {
-    if (requestedEntity) {
-      requestedEntity.hasBorrowed = true;
-      bI.by = event.params.by
-      bI.totalBorrow = bI.totalBorrow.plus(requestedEntity.amount)
-      bI.totalBorrowWithInterest = bI.totalBorrowWithInterest.plus(requestedEntity.amountWithInterest)
-      bI.apy = bI.apy.plus(requestedEntity.interestRate).div(BigInt.fromI32(2))
-      requestedEntity.save()
-    }
-    bI.save()
-  }
 }
 
-export function handleRepaid(event: RepaidEvent): void {
-  let entity = new Repaid(
+export function handleCancelledRequest(event: CancelledRequestEvent): void {
+  let entity = new CancelledRequest(
     event.transaction.hash.concatI32(event.logIndex.toI32())
   )
   entity.by = event.params.by
-  entity.borrowerIndex = event.params.borrowerIndex
-  entity.repayAmount = event.params.repayAmount
-  entity.burnAmount = event.params.burnAmount
-  entity.lastRepayTime = event.params.lastRepayTime
+  entity.borrowIndex = event.params.borrowIndex
+
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
 
   entity.save()
-
-  let __id = event.params.by.toHexString()
-  let bI = BorrowerInfo.load(__id);
-
-  if (bI) {
-    bI.totalRepaid = bI.totalRepaid.plus(event.params.repayAmount)
-    bI.totalInterestRepaid = (bI.totalRepaid.times(bI.apy)).div(BigInt.fromI32(PPM))
-    bI.save()
-  }
 }
 
 export function handleCancelledSupply(event: CancelledSupplyEvent): void {
@@ -120,15 +74,36 @@ export function handleCancelledSupply(event: CancelledSupplyEvent): void {
   entity.transactionHash = event.transaction.hash
 
   entity.save()
+}
 
-  let _id = event.params.borrowIndex.toString()
-  let requestedEntity = Requested.load(_id)
-  if (requestedEntity) {
-    requestedEntity.liquidity = requestedEntity.liquidity.minus(event.params.cancelAmount);
-    requestedEntity.liquidityPercentage = (requestedEntity.liquidity.toBigDecimal().times(BigDecimal.fromString('100'))).div(requestedEntity.amount.toBigDecimal())
-    requestedEntity.save()
-  }
+export function handleConvertedToToken(event: ConvertedToTokenEvent): void {
+  let entity = new ConvertedToToken(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+  entity.by = event.params.by
+  entity.amount = event.params.amount
+  entity.convertedAmount = event.params.convertedAmount
 
+  entity.blockNumber = event.block.number
+  entity.blockTimestamp = event.block.timestamp
+  entity.transactionHash = event.transaction.hash
+
+  entity.save()
+}
+
+export function handleDefaultWithdraw(event: DefaultWithdrawEvent): void {
+  let entity = new DefaultWithdraw(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+  entity.by = event.params.by
+  entity.borrowIndex = event.params.borrowIndex
+  entity.amount = event.params.amount
+
+  entity.blockNumber = event.block.number
+  entity.blockTimestamp = event.block.timestamp
+  entity.transactionHash = event.transaction.hash
+
+  entity.save()
 }
 
 export function handleFxRateUpdated(event: FxRateUpdatedEvent): void {
@@ -191,9 +166,26 @@ export function handleOwnershipTransferred(
   entity.save()
 }
 
+export function handleRepaid(event: RepaidEvent): void {
+  let entity = new Repaid(
+    event.transaction.hash.concatI32(event.logIndex.toI32())
+  )
+  entity.by = event.params.by
+  entity.borrowerIndex = event.params.borrowerIndex
+  entity.repayAmount = event.params.repayAmount
+  entity.burnAmount = event.params.burnAmount
+  entity.lastRepayTime = event.params.lastRepayTime
+
+  entity.blockNumber = event.block.number
+  entity.blockTimestamp = event.block.timestamp
+  entity.transactionHash = event.transaction.hash
+
+  entity.save()
+}
+
 export function handleRequested(event: RequestedEvent): void {
   let entity = new Requested(
-    event.params.index.toString()
+    event.transaction.hash.concatI32(event.logIndex.toI32())
   )
   entity.user = event.params.user
   entity.index = event.params.index
@@ -203,31 +195,12 @@ export function handleRequested(event: RequestedEvent): void {
   entity.interestRate = event.params.interestRate
   entity.repayAmountPerWindow = event.params.repayAmountPerWindow
   entity.repaymentWIndow = event.params.repaymentWIndow
-  entity.liquidity = BigInt.fromI32(0)
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-  entity.hasBorrowed = false;
-  entity.liquidityPercentage = BigDecimal.fromString('0')
-  entity.save()
-}
-
-export function handleCancelledRequest(event: CancelledRequestEvent): void {
-  let entity = new CancelledRequest(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.by = event.params.by
-  entity.borrowIndex = event.params.borrowIndex
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
 
   entity.save()
-
-  let _id = event.params.borrowIndex.toString()
-  store.remove('Requested', _id);
-
 }
 
 export function handleSignerUpdated(event: SignerUpdatedEvent): void {
@@ -251,53 +224,13 @@ export function handleSupplied(event: SuppliedEvent): void {
   entity.lender = event.params.lender
   entity.lendAmount = event.params.lendAmount
   entity.borrowIndex = event.params.borrowIndex
+
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash
 
-  let _id = event.params.borrowIndex.toString()
-
-  let requestedEntity = Requested.load(_id)
-  if (requestedEntity) {
-    requestedEntity.liquidity = requestedEntity.liquidity.plus(event.params.lendAmount)
-    requestedEntity.liquidityPercentage = (requestedEntity.liquidity.toBigDecimal().times(BigDecimal.fromString('100'))).div(requestedEntity.amount.toBigDecimal())
-    entity.borrower = requestedEntity.user;
-    requestedEntity.save()
-  }
-
-  let __id = event.params.lender.toHexString()
-  let lenderInfo = LenderInfo.load(__id);
-
-  if (!lenderInfo) {
-    let lenderInfo = new LenderInfo(__id);
-    lenderInfo.by = event.params.lender
-    lenderInfo.totalLend = event.params.lendAmount
-    lenderInfo.withdrawAmount = BigInt.fromI32(0)
-    lenderInfo.defaultAmount = BigInt.fromI32(0)
-
-    if (requestedEntity) {
-      lenderInfo.apy = requestedEntity.interestRate.toBigDecimal()
-      requestedEntity.save()
-    }
-
-    lenderInfo.interestEarned = BigDecimal.fromString('0')
-    lenderInfo.save()
-  } else {
-    lenderInfo.by = event.params.lender
-
-
-    if (requestedEntity) {
-      lenderInfo.apy = (lenderInfo.apy.plus(requestedEntity.interestRate.toBigDecimal())).div(BigDecimal.fromString("2"))
-      requestedEntity.save()
-    }
-
-    lenderInfo.totalLend = lenderInfo.totalLend.plus(event.params.lendAmount)
-    lenderInfo.save()
-  }
-
   entity.save()
 }
-
 
 export function handleWithdraw(event: WithdrawEvent): void {
   let entity = new Withdraw(
@@ -312,41 +245,4 @@ export function handleWithdraw(event: WithdrawEvent): void {
   entity.transactionHash = event.transaction.hash
 
   entity.save()
-
-  let __id = event.params.by.toHexString()
-  let lenderInfo = LenderInfo.load(__id);
-
-  if (lenderInfo) {
-    lenderInfo.by = event.params.by
-    lenderInfo.withdrawAmount = lenderInfo.withdrawAmount.plus(event.params.amount)
-    lenderInfo.interestEarned = lenderInfo.withdrawAmount.toBigDecimal().times(lenderInfo.apy).div(BigDecimal.fromString('PPM'))
-    lenderInfo.save()
-  }
-}
-
-export function handleDefaultWithdraw(event: DefaultWithdrawEvent): void {
-  let entity = new DefaultWithdraw(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.by = event.params.by
-  entity.borrowIndex = event.params.borrowIndex
-  entity.amount = event.params.amount
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-
-  let __id = event.params.by.toHexString()
-  let lenderInfo = LenderInfo.load(__id);
-
-  if (lenderInfo) {
-
-    lenderInfo.by = event.params.by
-    lenderInfo.withdrawAmount = lenderInfo.withdrawAmount.plus(event.params.amount)
-    lenderInfo.defaultAmount = lenderInfo.defaultAmount.plus(event.params.amount)
-
-    lenderInfo.interestEarned = lenderInfo.withdrawAmount.toBigDecimal().times(lenderInfo.apy).div(BigDecimal.fromString('PPM'))
-    lenderInfo.save()
-  }
 }
