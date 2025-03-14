@@ -61,11 +61,7 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     uint256 private constant ONE_YEAR_DAYS = 365;
 
     /// @dev The one day time in seconds
-    uint256 public ONE_DAY_SECONDS = 60;
-
-    function updateOnedayseconds(uint256 newVal) external {
-        ONE_DAY_SECONDS = newVal;
-    }
+    uint256 public ONE_DAY_SECONDS = 86_400;
 
     /// @notice The percentage value helps in calculating fxRate
     uint256 public immutable fxRatePercentage;
@@ -81,9 +77,6 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
 
     /// @notice The address of fxScheduler wallet
     address public fxScheduler;
-
-    // /// @notice The insurance rate that borrowers will pay
-    // uint256 public insuranceRatePPM;
 
     /// @notice The last timeStamp when fxScheduler updated the fxRate
     uint256 public timestampFx;
@@ -147,9 +140,6 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
 
     /// @dev Emitted when fxRate is updated
     event FxRateUpdated(address scheduler, uint256 fxRate);
-
-    // /// @dev Emitted when insurance rate is updated
-    // event InsuranceRateUpdated(uint256 oldInsuranceRate, uint256 newInsuranceRate);
 
     /// @dev Emitted when token is asset is converted to token
     event ConvertedToToken(address by, uint256 amount, uint256 convertedAmount);
@@ -250,16 +240,29 @@ contract Bennee is Ownable2Step, ReentrancyGuardTransient {
     /// @param amountToBorrow The amount of asset user want to borrow
     /// @param tenure The time duration in days for which user wants to borrow
     /// @param repayWindow The repay window in days and it should be less than tenure
+    /// @param interestRate The interest rate borrower wants to pay
+    /// @param deadline The deadline is validity of the signature
+    /// @param v The `v` signature parameter
+    /// @param r The `r` signature parameter
+    /// @param s The `s` signature parameter
+    function request(
+        uint256 amountToBorrow,
+        uint256 tenure,
+        uint256 repayWindow,
+        uint256 interestRate,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        // The borrower must be authorised to request for loan
+        bytes32 encodedMessageHash = keccak256(
+            abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
+        );
 
-    function request(uint256 amountToBorrow, uint256 tenure, uint256 repayWindow, uint256 interestRate) external {
-        // // The borrower must be authorised to request for loan
-        // bytes32 encodedMessageHash = keccak256(
-        //     abi.encodePacked(msg.sender, amountToBorrow, tenure, repayWindow, deadline)
-        // );
-
-        // if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
-        //     revert InvalidSignature();
-        // }
+        if (signer != ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(encodedMessageHash), v, r, s)) {
+            revert InvalidSignature();
+        }
 
         uint256 currentIndex = index++;
 

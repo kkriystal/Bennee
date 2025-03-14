@@ -6,11 +6,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: Bennee
-    network: holesky
+    network: sepolia
     source:
-      address: "0xF2414E7506AEf59C3b0b3A9Fc2B0537a9521f8E0"
+      address: "0x3ffF78d68B93EAD791Eb7725D756e77B5888deae"
       abi: Bennee
-      startBlock: 3482450
+      startBlock: 7896026
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

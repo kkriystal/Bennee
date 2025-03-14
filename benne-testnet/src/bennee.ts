@@ -32,7 +32,7 @@ import {
   BorrowerInfo,
 } from "../generated/schema"
 
-const PPM = 1000000;
+// const 1000000 = 1000000;
 
 export function handleBorrowed(event: BorrowedEvent): void {
   let entity = new Borrowed(
@@ -102,7 +102,7 @@ export function handleRepaid(event: RepaidEvent): void {
 
   if (bI) {
     bI.totalRepaid = bI.totalRepaid.plus(event.params.repayAmount)
-    bI.totalInterestRepaid = (bI.totalRepaid.times(bI.apy)).div(BigInt.fromI32(PPM))
+    bI.totalInterestRepaid = (bI.totalRepaid.times(bI.apy)).div(BigInt.fromI32(1000000))
     bI.save()
   }
 }
@@ -319,7 +319,7 @@ export function handleWithdraw(event: WithdrawEvent): void {
   if (lenderInfo) {
     lenderInfo.by = event.params.by
     lenderInfo.withdrawAmount = lenderInfo.withdrawAmount.plus(event.params.amount)
-    lenderInfo.interestEarned = lenderInfo.withdrawAmount.toBigDecimal().times(lenderInfo.apy).div(BigDecimal.fromString('PPM'))
+    lenderInfo.interestEarned = lenderInfo.withdrawAmount.toBigDecimal().times(lenderInfo.apy).div(BigDecimal.fromString('1000000'))
     lenderInfo.save()
   }
 }
@@ -346,7 +346,7 @@ export function handleDefaultWithdraw(event: DefaultWithdrawEvent): void {
     lenderInfo.withdrawAmount = lenderInfo.withdrawAmount.plus(event.params.amount)
     lenderInfo.defaultAmount = lenderInfo.defaultAmount.plus(event.params.amount)
 
-    lenderInfo.interestEarned = lenderInfo.withdrawAmount.toBigDecimal().times(lenderInfo.apy).div(BigDecimal.fromString('PPM'))
+    lenderInfo.interestEarned = lenderInfo.withdrawAmount.toBigDecimal().times(lenderInfo.apy).div(BigDecimal.fromString('1000000'))
     lenderInfo.save()
   }
 }

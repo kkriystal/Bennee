@@ -19,22 +19,22 @@ async function verify(address, constructorArguments) {
 async function main() {
   let { BennePlatform, BenneToken } = parsedFile
   
-  // const BenneeToken = await hre.ethers.deployContract("BenneToken", []);
-  // await BenneeToken.waitForDeployment();
+  
+  const BenneeToken = await hre.ethers.deployContract("BIDR", []);
+  await BenneeToken.waitForDeployment();
 
-  // console.log("BenneeToken deployed to:", BenneeToken.target);
+  console.log("BenneeToken deployed to:", BenneeToken.target);
 
-  // await new Promise((resolve) => setTimeout(resolve, 20000));
-  // verify(BenneeToken.target, []);
+  await new Promise((resolve) => setTimeout(resolve, 20000));
+  verify(BenneeToken.target, []);
 
   const assetAddress = process.env.ASSET_ADDRESS
   const owner = process.env.OWNER
   const signerAddress = process.env.SIGNER
-  // const insuranceRateInitPPM = process.env.INSURANCE_RATE_INIT_PPM
   const fxRatePPMInit = process.env.FX_RATE_INIT_PPM
   const fxRatePercentage = process.env.FX_RATE_PERCENTAGE
 
-  const Bennee = await hre.ethers.deployContract("Bennee", ["0x050Db37Fe5B1DeFA0F4562aFD2Cd6D7F4Eb0C0f9",
+  const Bennee = await hre.ethers.deployContract("Bennee", [BenneeToken.target,
     assetAddress,
     owner,
     signerAddress,
@@ -46,7 +46,7 @@ async function main() {
   console.log("Bennee deployed to:", Bennee.target);
 
   await new Promise((resolve) => setTimeout(resolve, 20000));
-  verify(Bennee.target, ["0x050Db37Fe5B1DeFA0F4562aFD2Cd6D7F4Eb0C0f9",
+  verify(Bennee.target, [BenneeToken.target,
     assetAddress,
     owner,
     signerAddress,
@@ -54,7 +54,7 @@ async function main() {
     fxRatePercentage]);
 
   parsedFile.BennePlatform = Bennee.target
-  parsedFile.BenneToken = "0x050Db37Fe5B1DeFA0F4562aFD2Cd6D7F4Eb0C0f9"
+  parsedFile.BenneToken = BenneeToken.target
   fs.writeFileSync('./.env', envfile.stringify(parsedFile))
 }
 

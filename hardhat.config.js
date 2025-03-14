@@ -15,6 +15,17 @@ module.exports = {
           evmVersion: "cancun",
         },
       },
+      // {
+      //   version: "0.8.0",
+      //   settings: {
+      //     viaIR: true,
+      //     optimizer: {
+      //       enabled: true,
+      //       runs: 1000000,
+      //     },
+      //     evmVersion: "cancun",
+      //   },
+      // },
     ],
   },
   networks: {
